@@ -1,0 +1,182 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>ระบบตรวจสอบผลไม้ AI</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #e8f5e9;
+    text-align: center;
+    padding: 20px;
+}
+
+.container {
+    background: white;
+    max-width: 450px;
+    margin: auto;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 3px 10px #ccc;
+}
+
+h1 {
+    color: #2e7d32;
+}
+
+img {
+    max-width: 250px;
+    max-height: 250px;
+    margin: 15px;
+    border-radius: 10px;
+    display: none;
+}
+
+input {
+    margin: 15px;
+}
+
+button {
+    background: #4caf50;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #388e3c;
+}
+
+#result {
+    margin-top: 20px;
+    color: #2e7d32;
+    font-size: 18px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🍎 ตรวจสอบผลไม้ด้วย AI</h1>
+
+    <p>เลือกรูปภาพผลไม้ที่ต้องการตรวจสอบ</p>
+
+    <!-- เลือกไฟล์ภาพ -->
+    <input type="file" id="imageUpload" accept="image/*">
+
+    <br>
+
+    <!-- แสดงภาพ -->
+    <img id="preview">
+
+    <br>
+
+    <!-- ปุ่มตรวจสอบ -->
+    <button onclick="predict()">ตรวจสอบผลไม้</button>
+
+    <!-- แสดงผล -->
+    <div id="result">
+        ผลการตรวจสอบจะแสดงที่นี่
+    </div>
+
+</div>
+
+<script>
+
+// ลิงก์โมเดล Teachable Machine
+const URL = "./my_model/";
+
+let model;
+
+// โหลดโมเดล AI
+async function init() {
+
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
+
+    model = await tmImage.load(modelURL, metadataURL);
+
+}
+
+// เลือกภาพจากเครื่อง
+document.getElementById("imageUpload").addEventListener("change", function(event) {
+
+    const file = event.target.files[0];
+
+    if (file) {
+
+        const image = document.getElementById("preview");
+
+        image.src = URL.createObjectURL(file);
+        image.style.display = "inline-block";
+
+        document.getElementById("result").innerHTML =
+            "เลือกรูปภาพเรียบร้อยแล้ว";
+
+    }
+
+});
+
+// ตรวจสอบผลไม้
+async function predict() {
+
+    const image = document.getElementById("preview");
+
+    if (!image.src || !image.complete || !image.naturalWidth) {
+        alert("กรุณาเลือกรูปภาพก่อน");
+        return;
+    }
+
+    document.getElementById("result").innerHTML =
+        "กำลังตรวจสอบ...";
+
+    try {
+
+        if (!model) {
+            await init();
+        }
+
+        const prediction = await model.predict(image);
+
+        let best = prediction[0];
+
+        for (let i = 0; i < prediction.length; i++) {
+
+            if (prediction[i].probability > best.probability) {
+                best = prediction[i];
+            }
+
+        }
+
+        document.getElementById("result").innerHTML =
+            "<h2>🍓 ผลการตรวจสอบ</h2>" +
+            "<h3>ผลไม้: " + best.className + "</h3>" +
+            "<p>ความแม่นยำ: " +
+            (best.probability * 100).toFixed(2) +
+            "%</p>";
+
+    } catch (error) {
+
+        document.getElementById("result").innerHTML =
+            "เกิดข้อผิดพลาด กรุณาตรวจสอบโมเดล";
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
